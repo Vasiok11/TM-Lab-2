@@ -5,7 +5,6 @@ from game.entities import Cell, Human, Vampire
 from utils.save_load import SaveLoadManager
 from utils.resources import load_image
 
-
 class GameScreen:
     def __init__(self, game):
         self.game = game
@@ -42,7 +41,6 @@ class GameScreen:
         self._init_buttons()
         self._init_colors()
 
-
     def _init_colors(self):
         self.ui_colors = {
             "bg": pygame.Color("#2E1A1A"),
@@ -69,14 +67,13 @@ class GameScreen:
             "load": pygame.Rect(460, buttons_y, button_width, self.button_height),
             "forest": pygame.Rect(570, buttons_y, button_width, self.button_height),
             "bunker": pygame.Rect(680, buttons_y, button_width, self.button_height),
+            "music_toggle": pygame.Rect(self.config.SCREEN_WIDTH - 330, buttons_y, 100, self.button_height),
             "menu": pygame.Rect(self.config.SCREEN_WIDTH - 120, buttons_y, button_width, self.button_height)
         }
 
     def handle_event(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN:
-            # Play click sound for any button press
             button_clicked = False
-
             # Check button clicks
             if self.button_areas["pause"].collidepoint(event.pos):
                 self.paused = not self.paused
@@ -99,21 +96,22 @@ class GameScreen:
                 self.drawing_mode = Cell.FOREST
             elif self.button_areas["bunker"].collidepoint(event.pos):
                 self.drawing_mode = Cell.BUNKER
+            elif self.button_areas["music_toggle"].collidepoint(event.pos):
+                self.audio_manager.toggle_mute()
+                button_clicked = True
             elif self.button_areas["menu"].collidepoint(event.pos):
                 self.game.current_state = self.game.MAIN_MENU
                 button_clicked = True
 
-            # Play sound if any button was clicked
             if button_clicked:
-                self.game.audio_manager.play_sound("button_click")
+                self.audio_manager.play_sound("button_click")
 
             # Handle grid cell clicking
             elif (self.grid_x_offset <= event.pos[0] <= self.grid_x_offset + self.grid_surface_width and
                   self.grid_y_offset <= event.pos[1] <= self.grid_y_offset + self.grid_surface_height):
                 x = (event.pos[0] - self.grid_x_offset) // self.config.CELL_SIZE
                 y = (event.pos[1] - self.grid_y_offset) // self.config.CELL_SIZE
-
-                if event.button == 1:  # Left click
+                if event.button == 1:
                     if pygame.key.get_mods() & pygame.KMOD_SHIFT:
                         self.grid.set_cell(x, y, Cell.VAMPIRE)
                     elif pygame.key.get_mods() & pygame.KMOD_CTRL:
@@ -122,11 +120,10 @@ class GameScreen:
                         self.grid.set_cell(x, y, Cell.BUNKER)
                     else:
                         self.grid.set_cell(x, y, Cell.HUMAN)
-                elif event.button == 3:  # Right click
+                elif event.button == 3:
                     self.grid.set_cell(x, y, Cell.EMPTY)
 
         elif event.type == pygame.MOUSEMOTION:
-            # Handle drawing by dragging
             if event.buttons[0] and self.drawing_mode is not None:
                 if (self.grid_x_offset <= event.pos[0] <= self.grid_x_offset + self.grid_surface_width and
                         self.grid_y_offset <= event.pos[1] <= self.grid_y_offset + self.grid_surface_height):
@@ -162,24 +159,17 @@ class GameScreen:
             if self.time_since_last_step >= 1.0 / self.simulation_speed:
                 self.simulation.step()
                 self.time_since_last_step = 0
-
-        # Update day/night cycle regardless of pause state
-        time_changed = self.simulation.update(dt)
+        self.simulation.update(dt)
 
     def draw(self, screen):
-        # Fill with base color first
-        screen.fill(self.ui_colors["bg"])
-
-        # Draw background tiles using the day/night images
+        # Draw background based on day/night
         if self.simulation.is_day:
             self._draw_tiled_background(screen, self.day_bg, is_day=True)
         else:
             self._draw_tiled_background(screen, self.night_bg, is_day=False)
 
-        # Draw grid
+        # Draw grid, HUD, and UI elements
         self._draw_grid(screen)
-
-        # Draw HUD elements
         self._draw_day_night_indicator(screen)
         self._draw_population_counts(screen)
         self._draw_simulation_speed(screen)
@@ -187,56 +177,29 @@ class GameScreen:
         self._draw_tool_indicator(screen)
 
     def _draw_tiled_background(self, screen, bg_image, is_day=False):
-        # Create a surface for the grid area only
         bg_surface = pygame.Surface((self.grid_surface_width, self.grid_surface_height), pygame.SRCALPHA)
-
-        # Scale down the image to the desired size
         small_tile_size = 24
         small_bg_image = pygame.transform.scale(bg_image, (small_tile_size, small_tile_size))
-
-        # Brighten the day image if needed
         if is_day:
-            # Create a copy to modify
             brightened_image = small_bg_image.copy()
-
-            # Get pixel array to modify colors
             pixel_array = pygame.surfarray.pixels3d(brightened_image)
-
-            # Increase brightness (multiply RGB values, clamp to 255)
-            # Adjust the brightness factor as needed (1.3 = 30% brighter)
-            brightness_factor = 1.3
-
-            # Apply brightness with numpy operations
             import numpy as np
-            brighten = np.minimum(pixel_array * brightness_factor, 255).astype(np.uint8)
+            brighten = np.minimum(pixel_array * 1.3, 255).astype(np.uint8)
             pixel_array[:] = brighten
-
-            # Free the surface array
             del pixel_array
-
-            # Use the brightened image
             small_bg_image = brightened_image
-
-        # Set opacity
-        small_bg_image.set_alpha(178)  # 70% opacity
-
-        # Calculate how many tiles we need with the adjusted tile size
+        small_bg_image.set_alpha(178)
         cols = self.grid_surface_width // small_tile_size + 1
         rows = self.grid_surface_height // small_tile_size + 1
-
-        # Draw the tiled background
         for row in range(rows):
             for col in range(cols):
                 x = col * small_tile_size
                 y = row * small_tile_size
                 bg_surface.blit(small_bg_image, (x, y))
-
-        # Draw the background only behind the grid
         screen.blit(bg_surface, (self.grid_x_offset, self.grid_y_offset))
 
     def _draw_grid(self, screen):
         grid_surface = pygame.Surface((self.grid_surface_width, self.grid_surface_height), pygame.SRCALPHA)
-        # Draw subtle grid pattern
         for x in range(self.grid.width):
             for y in range(self.grid.height):
                 rect = pygame.Rect(
@@ -247,7 +210,6 @@ class GameScreen:
                 )
                 if (x + y) % 2 == 0:
                     pygame.draw.rect(grid_surface, (*self.config.BG_COLOR, 50), rect)
-        # Draw cells with depth effect
         for x in range(self.grid.width):
             for y in range(self.grid.height):
                 cell = self.grid.cells[x][y]
@@ -266,18 +228,14 @@ class GameScreen:
                         base_color = self.config.FOREST_COLOR
                     elif cell.is_bunker():
                         base_color = self.config.BUNKER_COLOR
-
-                    # Cell shading
                     pygame.draw.rect(grid_surface, base_color, rect, border_radius=2)
                     pygame.draw.rect(grid_surface, (255, 255, 255, 30), rect.inflate(-2, -2), border_radius=2)
                     pygame.draw.rect(grid_surface, (0, 0, 0, 30), rect.inflate(-4, -4), border_radius=2)
-        # Draw grid lines
         for x in range(0, self.grid_surface_width, self.config.CELL_SIZE):
             pygame.draw.line(grid_surface, (*self.config.GRID_COLOR, 100), (x, 0), (x, self.grid_surface_height))
         for y in range(0, self.grid_surface_height, self.config.CELL_SIZE):
             pygame.draw.line(grid_surface, (*self.config.GRID_COLOR, 100), (0, y), (self.grid_surface_width, y))
         screen.blit(grid_surface, (self.grid_x_offset, self.grid_y_offset))
-        # Draw hover effect
         if self.hover_pos and (
                 self.grid_x_offset <= self.hover_pos[0] <= self.grid_x_offset + self.grid_surface_width and
                 self.grid_y_offset <= self.hover_pos[1] <= self.grid_y_offset + self.grid_surface_height):
@@ -292,36 +250,26 @@ class GameScreen:
             pygame.draw.rect(screen, (255, 255, 255, 50), rect, 2)
 
     def _draw_day_night_indicator(self, screen):
-        # Draw sun/moon icon
         icon_size = 32
         center = (self.config.SCREEN_WIDTH // 2 - 40 + icon_size // 2, 10 + icon_size // 2)
         if self.simulation.is_day:
             pygame.draw.circle(screen, self.ui_colors["sun"], center, icon_size // 2)
         else:
             pygame.draw.circle(screen, self.ui_colors["moon"], center, icon_size // 2)
-            # Add crescent shape
             pygame.draw.circle(screen, self.ui_colors["bg"], (center[0] - 5, center[1]), icon_size // 2 - 3)
-
-        # Gradient progress bar
         progress = self.simulation.day_time / self.config.DAY_DURATION
         bar_width = 250
         bar_height = 20
         bar_x = self.config.SCREEN_WIDTH // 2 - bar_width // 2
         bar_y = 50
         bar_rect = pygame.Rect(bar_x, bar_y, bar_width, bar_height)
-
-        # Ensure the background color is a valid RGBA tuple
         bg_color = self.ui_colors["button"]
         if isinstance(bg_color, pygame.Color):
-            bg_color = (bg_color.r, bg_color.g, bg_color.b, 150)  # Convert to RGBA
+            bg_color = (bg_color.r, bg_color.g, bg_color.b, 150)
         else:
-            bg_color = (*bg_color, 150)  # Append alpha value
-
-        # Draw unfilled bar background
-        pygame.draw.rect(screen, bg_color, bar_rect)  # Background
-        pygame.draw.rect(screen, self.ui_colors["border"], bar_rect, 2)  # Border
-
-        # Draw filled portion based on progress
+            bg_color = (*bg_color, 150)
+        pygame.draw.rect(screen, bg_color, bar_rect)
+        pygame.draw.rect(screen, self.ui_colors["border"], bar_rect, 2)
         filled_width = int(bar_width * progress)
         filled_rect = pygame.Rect(bar_x, bar_y, filled_width, bar_height)
         for x in range(filled_width):
@@ -333,40 +281,34 @@ class GameScreen:
 
     def _draw_population_counts(self, screen):
         stats = self.grid.get_population_stats()
-        # Human counter
         self._draw_counter(screen, 20, 20, Human.get_color(self.config, self.simulation.is_day), stats["human_count"])
-        # Vampire counter
-        self._draw_counter(screen, 20, 80, Vampire.get_color(self.config, self.simulation.is_day),
-                           stats["vampire_count"])
-        # Forest counter
+        self._draw_counter(screen, 20, 80, Vampire.get_color(self.config, self.simulation.is_day), stats["vampire_count"])
         self._draw_counter(screen, 20, 140, self.config.FOREST_COLOR, stats["forest_count"])
-        # Bunker counter
         self._draw_counter(screen, 20, 200, self.config.BUNKER_COLOR, stats["bunker_count"])
 
     def _draw_counter(self, screen, x, y, color, count):
         bg_rect = pygame.Rect(x - 10, y - 10, 160, 50)
         pygame.draw.rect(screen, self.ui_colors["button"], bg_rect, border_radius=8)
         pygame.draw.rect(screen, color, bg_rect, 2, border_radius=8)
-
-        # Draw icon
         pygame.draw.circle(screen, color, (x + 20, y + 20), 12)
         text = self.font.render(f"{count}", True, color)
         screen.blit(text, (x + 50, y + 8))
 
     def _draw_buttons(self, screen):
         for name, rect in self.button_areas.items():
-            # Check if hover position is valid
             if self.hover_pos is not None and rect.collidepoint(self.hover_pos):
                 color = self.ui_colors["button_hover"]
             else:
                 color = self.ui_colors["button"]
-
-            # Draw button background
             pygame.draw.rect(screen, color, rect, border_radius=6)
             pygame.draw.rect(screen, self.ui_colors["border"], rect, 2, border_radius=6)
-
-            # Draw button text
-            text = "▶ Resume" if name == "pause" and self.paused else "⏸ Pause" if name == "pause" else f"{name.capitalize()}"
+            if name == "pause":
+                text = "⏸ Pause" if not self.paused else "▶ Resume"
+            elif name == "music_toggle":
+                # Use audio_manager.is_muted to determine display text
+                text = "🎵 On" if not self.audio_manager.is_muted else "🔇 Off"
+            else:
+                text = name.capitalize()
             text_surface = self.font.render(text, True, self.ui_colors["text"])
             screen.blit(text_surface, (
                 rect.x + (rect.width - text_surface.get_width()) // 2,
@@ -382,8 +324,7 @@ class GameScreen:
                 Cell.FOREST: self.config.FOREST_COLOR,
                 Cell.BUNKER: self.config.BUNKER_COLOR,
                 Cell.EMPTY: (200, 200, 200)
-            }[self.drawing_mode]
-
+            }.get(self.drawing_mode, (200, 200, 200))
             pygame.draw.rect(screen, color, icon_rect, border_radius=4)
             pygame.draw.rect(screen, self.ui_colors["border"], icon_rect.inflate(4, 4), 2, border_radius=6)
 
