@@ -44,7 +44,9 @@ class GameScreen:
             "text": pygame.Color("#E7D6C4"),
             "border": pygame.Color("#3A2323"),
             "sun": pygame.Color("#FFD700"),
-            "moon": pygame.Color("#A0A0A0")
+            "moon": pygame.Color("#A0A0A0"),
+            "forest": self.config.FOREST_COLOR,
+            "bunker": self.config.BUNKER_COLOR
         }
 
     def _init_buttons(self):
@@ -58,6 +60,8 @@ class GameScreen:
             "reset": pygame.Rect(240, buttons_y, button_width, self.button_height),
             "save": pygame.Rect(350, buttons_y, button_width, self.button_height),
             "load": pygame.Rect(460, buttons_y, button_width, self.button_height),
+            "forest": pygame.Rect(570, buttons_y, button_width, self.button_height),
+            "bunker": pygame.Rect(680, buttons_y, button_width, self.button_height),
             "menu": pygame.Rect(self.config.SCREEN_WIDTH - 120, buttons_y, button_width, self.button_height)
         }
 
@@ -76,6 +80,10 @@ class GameScreen:
                 loaded = self.save_manager.load_game()
                 if loaded:
                     self.grid, self.simulation = loaded
+            elif self.button_areas["forest"].collidepoint(event.pos):
+                self.drawing_mode = Cell.FOREST
+            elif self.button_areas["bunker"].collidepoint(event.pos):
+                self.drawing_mode = Cell.BUNKER
             elif self.button_areas["menu"].collidepoint(event.pos):
                 self.game.current_state = self.game.MAIN_MENU
             # Handle grid cell clicking
@@ -87,6 +95,10 @@ class GameScreen:
                 if event.button == 1:  # Left click
                     if pygame.key.get_mods() & pygame.KMOD_SHIFT:
                         self.grid.set_cell(x, y, Cell.VAMPIRE)
+                    elif pygame.key.get_mods() & pygame.KMOD_CTRL:
+                        self.grid.set_cell(x, y, Cell.FOREST)
+                    elif pygame.key.get_mods() & pygame.KMOD_ALT:
+                        self.grid.set_cell(x, y, Cell.BUNKER)
                     else:
                         self.grid.set_cell(x, y, Cell.HUMAN)
                 elif event.button == 3:  # Right click
@@ -114,6 +126,10 @@ class GameScreen:
                 self.drawing_mode = Cell.HUMAN
             elif event.key == pygame.K_v:
                 self.drawing_mode = Cell.VAMPIRE
+            elif event.key == pygame.K_f:
+                self.drawing_mode = Cell.FOREST
+            elif event.key == pygame.K_b:
+                self.drawing_mode = Cell.BUNKER
             elif event.key == pygame.K_e:
                 self.drawing_mode = Cell.EMPTY
             elif event.key == pygame.K_ESCAPE:
@@ -148,7 +164,7 @@ class GameScreen:
         # Draw subtle grid pattern
         for x in range(self.grid.width):
             for y in range(self.grid.height):
-                rect = pygame.Rect(  # Use pygame.Rect instead of a tuple
+                rect = pygame.Rect(
                     x * self.config.CELL_SIZE,
                     y * self.config.CELL_SIZE,
                     self.config.CELL_SIZE,
@@ -161,7 +177,7 @@ class GameScreen:
             for y in range(self.grid.height):
                 cell = self.grid.cells[x][y]
                 if not cell.is_empty():
-                    rect = pygame.Rect(  # Use pygame.Rect instead of a tuple
+                    rect = pygame.Rect(
                         x * self.config.CELL_SIZE + 2,
                         y * self.config.CELL_SIZE + 2,
                         self.config.CELL_SIZE - 4,
@@ -169,8 +185,13 @@ class GameScreen:
                     )
                     if cell.is_human():
                         base_color = Human.get_color(self.config, self.simulation.is_day, cell.age)
-                    else:
+                    elif cell.is_vampire():
                         base_color = Vampire.get_color(self.config, self.simulation.is_day, cell.age)
+                    elif cell.is_forest():
+                        base_color = self.config.FOREST_COLOR
+                    elif cell.is_bunker():
+                        base_color = self.config.BUNKER_COLOR
+
                     # Cell shading
                     pygame.draw.rect(grid_surface, base_color, rect, border_radius=2)
                     pygame.draw.rect(grid_surface, (255, 255, 255, 30), rect.inflate(-2, -2), border_radius=2)
@@ -187,7 +208,7 @@ class GameScreen:
                 self.grid_y_offset <= self.hover_pos[1] <= self.grid_y_offset + self.grid_surface_height):
             x = (self.hover_pos[0] - self.grid_x_offset) // self.config.CELL_SIZE
             y = (self.hover_pos[1] - self.grid_y_offset) // self.config.CELL_SIZE
-            rect = pygame.Rect(  # Use pygame.Rect instead of a tuple
+            rect = pygame.Rect(
                 self.grid_x_offset + x * self.config.CELL_SIZE,
                 self.grid_y_offset + y * self.config.CELL_SIZE,
                 self.config.CELL_SIZE,
@@ -236,12 +257,16 @@ class GameScreen:
                              (bar_rect.x + x, bar_rect.y + bar_height))
 
     def _draw_population_counts(self, screen):
-        human_count = sum(1 for row in self.grid.cells for cell in row if cell.is_human())
-        vampire_count = sum(1 for row in self.grid.cells for cell in row if cell.is_vampire())
+        stats = self.grid.get_population_stats()
         # Human counter
-        self._draw_counter(screen, 20, 20, Human.get_color(self.config, self.simulation.is_day), human_count)
+        self._draw_counter(screen, 20, 20, Human.get_color(self.config, self.simulation.is_day), stats["human_count"])
         # Vampire counter
-        self._draw_counter(screen, 20, 80, Vampire.get_color(self.config, self.simulation.is_day), vampire_count)
+        self._draw_counter(screen, 20, 80, Vampire.get_color(self.config, self.simulation.is_day),
+                           stats["vampire_count"])
+        # Forest counter
+        self._draw_counter(screen, 20, 140, self.config.FOREST_COLOR, stats["forest_count"])
+        # Bunker counter
+        self._draw_counter(screen, 20, 200, self.config.BUNKER_COLOR, stats["bunker_count"])
 
     def _draw_counter(self, screen, x, y, color, count):
         bg_rect = pygame.Rect(x - 10, y - 10, 160, 50)
@@ -279,15 +304,15 @@ class GameScreen:
             color = {
                 Cell.HUMAN: Human.get_color(self.config, self.simulation.is_day),
                 Cell.VAMPIRE: Vampire.get_color(self.config, self.simulation.is_day),
+                Cell.FOREST: self.config.FOREST_COLOR,
+                Cell.BUNKER: self.config.BUNKER_COLOR,
                 Cell.EMPTY: (200, 200, 200)
             }[self.drawing_mode]
 
             pygame.draw.rect(screen, color, icon_rect, border_radius=4)
             pygame.draw.rect(screen, self.ui_colors["border"], icon_rect.inflate(4, 4), 2, border_radius=6)
 
-
     def _draw_simulation_speed(self, screen):
         speed_text = f"Speed: {self.simulation_speed}x"
         text_surface = self.font.render(speed_text, True, self.ui_colors["text"])
         screen.blit(text_surface, (self.config.SCREEN_WIDTH - text_surface.get_width() - 30, 20))
-
