@@ -25,6 +25,19 @@ class Config:
         self.DEFAULT_SIMULATION_SPEED = 5  # Updates per second
         self.DAY_DURATION = 10  # Seconds per day/night cycle
 
+        # Audio Configuration
+        self.MUSIC_VOLUME = 0.5  # Range: 0.0 to 1.0
+        self.SOUND_EFFECTS_VOLUME = 0.7  # Range: 0.0 to 1.0
+
+        # Music file paths (using .wav as you mentioned)
+        self.MENU_MUSIC = "assets/menu.wav"
+        self.GAME_MUSIC_DAY = "assets/game.wav"
+        self.GAME_MUSIC_NIGHT = "assets/game.wav"
+
+        self.SOUND_FX = {
+            "button_click": "assets/pop.wav",
+        }
+
         # Enhanced simulation rules
         self.rules = {
             "day": {

@@ -150,22 +150,27 @@ class MainMenu:
         if event.type == pygame.MOUSEBUTTONDOWN:
             for i, rect in enumerate(self.button_rects):
                 if rect.collidepoint(event.pos):
-                    if self.has_sound:
-                        self.select_sound.play()
+                    # Play button click sound using the game's audio manager
+                    self.game.audio_manager.play_sound("button_click")
                     self.handle_option_selection(i)
                     break
+
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_UP:
                 self.selected_option = (self.selected_option - 1) % len(self.options)
-                if self.has_sound and self.prev_selected != self.selected_option:
-                    self.hover_sound.play()
+                if self.prev_selected != self.selected_option:
+                    # Optional: Play hover sound if you want
+                    self.game.audio_manager.play_sound("button_hover")  # Add this to your SOUND_FX config
+
             elif event.key == pygame.K_DOWN:
                 self.selected_option = (self.selected_option + 1) % len(self.options)
-                if self.has_sound and self.prev_selected != self.selected_option:
-                    self.hover_sound.play()
+                if self.prev_selected != self.selected_option:
+                    # Optional: Play hover sound if you want
+                    self.game.audio_manager.play_sound("button_hover")  # Add this to your SOUND_FX config
+
             elif event.key == pygame.K_RETURN:
-                if self.has_sound:
-                    self.select_sound.play()
+                # Play button click sound on selection
+                self.game.audio_manager.play_sound("button_click")
                 self.handle_option_selection(self.selected_option)
 
     def handle_option_selection(self, index):
