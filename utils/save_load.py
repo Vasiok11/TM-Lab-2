@@ -1,6 +1,5 @@
 import os
 import json
-import pickle
 import datetime
 from game.grid import Grid
 from game.simulation import Simulation
@@ -20,7 +19,12 @@ class SaveLoadManager:
             save_data = {
                 "grid_state": grid.get_serialized_state(),
                 "is_day": simulation.is_day,
-                "day_time": simulation.day_time
+                "day_time": simulation.day_time,
+                "vampire_hunger": simulation.vampire_hunger,
+                "metadata": {
+                    "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "statistics": simulation.get_statistics()
+                }
             }
 
             # Generate filename with timestamp
@@ -66,6 +70,10 @@ class SaveLoadManager:
             simulation.is_day = save_data["is_day"]
             simulation.day_time = save_data["day_time"]
 
+            # Load vampire hunger if available (for backwards compatibility)
+            if "vampire_hunger" in save_data:
+                simulation.vampire_hunger = save_data["vampire_hunger"]
+
             print(f"Game loaded from {filename}")
             return grid, simulation
         except Exception as e:
@@ -84,4 +92,39 @@ class SaveLoadManager:
             save_files.sort(key=lambda f: os.path.getmtime(os.path.join(self.config.SAVE_FOLDER, f)))
             return save_files
         except Exception:
+            return []
+
+    def get_saved_games_info(self):
+        """Get information about all saved games"""
+        save_info = []
+
+        try:
+            save_files = self._get_save_files()
+
+            for filename in save_files:
+                filepath = os.path.join(self.config.SAVE_FOLDER, filename)
+
+                # Get file metadata
+                modified_time = os.path.getmtime(filepath)
+                modified_date = datetime.datetime.fromtimestamp(modified_time).strftime("%Y-%m-%d %H:%M:%S")
+
+                # Try to read game statistics if available
+                stats = None
+                try:
+                    with open(filepath, 'r') as f:
+                        save_data = json.load(f)
+                        if "metadata" in save_data and "statistics" in save_data["metadata"]:
+                            stats = save_data["metadata"]["statistics"]
+                except:
+                    pass
+
+                save_info.append({
+                    "filename": filename,
+                    "modified": modified_date,
+                    "statistics": stats
+                })
+
+            return save_info
+        except Exception as e:
+            print(f"Error getting save info: {e}")
             return []
