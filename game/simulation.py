@@ -1,5 +1,4 @@
 from game.entities import Cell
-import random
 
 
 class Simulation:
@@ -53,8 +52,6 @@ class Simulation:
         # Count neighbors
         human_neighbors = self.grid.count_neighbors(x, y, Cell.HUMAN)
         vampire_neighbors = self.grid.count_neighbors(x, y, Cell.VAMPIRE)
-        forest_neighbors = self.grid.count_neighbors(x, y, Cell.FOREST)
-        bunker_neighbors = self.grid.count_neighbors(x, y, Cell.BUNKER)
         total_neighbors = human_neighbors + vampire_neighbors
 
         # Empty cell rules
@@ -87,10 +84,6 @@ class Simulation:
             # Calculate chance of conversion based on vampire neighbors
             conversion_chance = vulnerability * vampire_neighbors
 
-            # Humans hide in bunkers at night
-            if not self.is_day and bunker_neighbors > 0 and random.random() < 0.5:
-                return  # Human stays safe in bunker
-
             if conversion_chance >= ruleset["human"]["convert_threshold"]:
                 cell.set_next_state(Cell.VAMPIRE)
             # Check for survival based on human population dynamics
@@ -114,10 +107,6 @@ class Simulation:
                 if ruleset["vampire"]["feeding_converts"]:
                     # This is handled by human conversion logic already
                     pass
-
-            # Vampires hide in forests during day
-            if self.is_day and forest_neighbors > 0 and random.random() < 0.5:
-                return  # Vampire stays safe in forest
 
             # Check for death in sunlight - older vampires are more resistant
             if self.is_day and ruleset["vampire"]["die_in_sunlight"]:
