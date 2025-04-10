@@ -105,4 +105,4 @@ MIT License. Use, modify, and adapt freely.
 
 ---
 
-Made with 💀 and Python.
+Made with Python.
