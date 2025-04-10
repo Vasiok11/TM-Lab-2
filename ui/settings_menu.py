@@ -26,7 +26,11 @@ class SettingsMenu:
             {"name": "Human Ratio", "value": 0.1, "min": 0.05, "max": 0.3, "step": 0.05,
              "description": "Initial % of humans"},
             {"name": "Vampire Ratio", "value": 0.05, "min": 0.01, "max": 0.2, "step": 0.01,
-             "description": "Initial % of vampires"}
+             "description": "Initial % of vampires"},
+            {"name": "Music Volume", "value": 0.5, "min": 0.0, "max": 1.0, "step": 0.05,
+             "description": "Adjust background music volume"},
+            {"name": "Sound FX Volume", "value": 0.7, "min": 0.0, "max": 1.0, "step": 0.05,
+             "description": "Adjust menu and interaction sounds"}
         ]
 
         self.selected_setting = 0
@@ -156,9 +160,15 @@ class SettingsMenu:
         self.config.DEFAULT_SIMULATION_SPEED = self.settings[0]["value"]
         self.game.game_screen.simulation_speed = self.settings[0]["value"]
         self.config.DAY_DURATION = self.settings[1]["value"]
+        self.config.MUSIC_VOLUME = self.settings[4]["value"]
+        self.config.SOUND_VOLUME = self.settings[5]["value"]
+
+        # Apply directly if music is playing
+        if pygame.mixer.music.get_busy():
+            pygame.mixer.music.set_volume(self.config.MUSIC_VOLUME)
 
     def _reset_to_defaults(self):
-        defaults = [10, 15, 0.1, 0.05]
+        defaults = [10, 15, 0.1, 0.05, 0.5, 0.7]
         for i, setting in enumerate(self.settings):
             setting["value"] = defaults[i]
         self._apply_settings()
@@ -177,45 +187,38 @@ class SettingsMenu:
         screen.blit(title_surface, (title_x, 60))
 
         for i, (setting, rect) in enumerate(zip(self.settings, self.slider_rects)):
-            # Background glow
             if i == self.selected_setting:
                 glow_strength = (math.sin(pygame.time.get_ticks() / 250) + 1) * 0.5
                 glow_color = (int(80 * glow_strength), 0, 0)
                 pygame.draw.rect(screen, glow_color, rect.inflate(14, 14), border_radius=12)
 
-            # Name and description
             name_surf = self.option_font.render(setting["name"], True, (255, 255, 255))
             desc_surf = self.info_font.render(setting["description"], True, (160, 160, 160))
             screen.blit(name_surf, (rect.x, rect.y - 45))
             screen.blit(desc_surf, (rect.x, rect.y - 22))
 
-            # Track and fill
             pygame.draw.rect(screen, (40, 10, 10), rect, border_radius=6)
             fill_width = int(((setting["value"] - setting["min"]) / (setting["max"] - setting["min"])) * rect.width)
             pygame.draw.rect(screen, (150, 0, 0), pygame.Rect(rect.x, rect.y, fill_width, rect.height), border_radius=6)
 
-            # Handle
             handle_x = rect.x + fill_width
             handle_y = rect.y + rect.height // 2
             pygame.draw.circle(screen, (200, 50, 50), (handle_x, handle_y), self.handle_radius)
             pygame.draw.circle(screen, (255, 255, 255), (handle_x, handle_y), 3)
 
-            # Value text
-            if i == 0:
-                value_text = f"{int(setting['value'])}x"
-            elif i == 1:
-                value_text = f"{int(setting['value'])}s"
-            else:
+            if setting["max"] <= 1:
                 value_text = f"{int(setting['value'] * 100)}%"
+            elif setting["name"].startswith("Simulation"):
+                value_text = f"{int(setting['value'])}x"
+            else:
+                value_text = f"{int(setting['value'])}s"
 
             value_surface = self.option_font.render(value_text, True, (230, 230, 230))
             screen.blit(value_surface, (rect.right + 15, rect.y + (rect.height - value_surface.get_height()) // 2))
 
-        # Draw buttons
         self._draw_button(screen, self.back_button, "Back", self.selected_setting == len(self.settings))
         self._draw_button(screen, self.reset_button, "Reset", self.selected_setting == len(self.settings) + 1)
 
-        # Footer instructions
         hint = "← → adjust | ↑ ↓ navigate | Enter = select"
         hint_surface = self.info_font.render(hint, True, (160, 160, 160))
         hint_x = (self.config.SCREEN_WIDTH - hint_surface.get_width()) // 2
