@@ -69,6 +69,40 @@ VAMPIRE_PATTERNS = {
     ]
 }
 
+# Forest patterns
+FOREST_PATTERNS = {
+    "small": [
+        [Cell.FOREST, Cell.FOREST],
+        [Cell.FOREST, Cell.FOREST]
+    ],
+    "medium": [
+        [0, Cell.FOREST, 0],
+        [Cell.FOREST, Cell.FOREST, Cell.FOREST],
+        [0, Cell.FOREST, 0]
+    ],
+    "large": [
+        [Cell.FOREST, Cell.FOREST, Cell.FOREST],
+        [Cell.FOREST, 0, Cell.FOREST],
+        [Cell.FOREST, Cell.FOREST, Cell.FOREST]
+    ]
+}
+
+# Bunker patterns
+BUNKER_PATTERNS = {
+    "small": [
+        [Cell.BUNKER]
+    ],
+    "medium": [
+        [Cell.BUNKER, Cell.BUNKER],
+        [Cell.BUNKER, Cell.BUNKER]
+    ],
+    "large": [
+        [0, Cell.BUNKER, 0],
+        [Cell.BUNKER, Cell.BUNKER, Cell.BUNKER],
+        [0, Cell.BUNKER, 0]
+    ]
+}
+
 # Mixed scenarios
 SCENARIOS = {
     "village_raid": {
@@ -77,6 +111,26 @@ SCENARIOS = {
             {"pattern": HUMAN_PATTERNS["human_village"], "x": 10, "y": 10},
             {"pattern": VAMPIRE_PATTERNS["pair"], "x": 10, "y": 5},
             {"pattern": VAMPIRE_PATTERNS["pair"], "x": 15, "y": 5}
+        ]
+    },
+
+    "forest_encounter": {
+        "description": "Humans near a vampire spawning forest",
+        "patterns": [
+            {"pattern": FOREST_PATTERNS["medium"], "x": 10, "y": 10},
+            {"pattern": HUMAN_PATTERNS["block"], "x": 15, "y": 15},
+            {"pattern": BUNKER_PATTERNS["small"], "x": 20, "y": 20}
+        ]
+    },
+
+    "bunker_defense": {
+        "description": "Humans defending a bunker from vampires",
+        "patterns": [
+            {"pattern": BUNKER_PATTERNS["medium"], "x": 15, "y": 15},
+            {"pattern": HUMAN_PATTERNS["block"], "x": 15, "y": 14},
+            {"pattern": HUMAN_PATTERNS["block"], "x": 16, "y": 16},
+            {"pattern": VAMPIRE_PATTERNS["triangle"], "x": 12, "y": 12},
+            {"pattern": VAMPIRE_PATTERNS["triangle"], "x": 18, "y": 12}
         ]
     },
 
