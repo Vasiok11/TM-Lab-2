@@ -1,8 +1,8 @@
 class Config:
     def __init__(self):
         # Display settings
-        self.SCREEN_WIDTH = 1024
-        self.SCREEN_HEIGHT = 768
+        self.SCREEN_WIDTH = 1400
+        self.SCREEN_HEIGHT = 800
         self.FPS = 60
 
         # Colors
