@@ -9,6 +9,7 @@ class GameScreen:
     def __init__(self, game):
         self.game = game
         self.config = game.config
+        self.audio_manager = game.audio_manager
 
         # Initialize grid and simulation
         self.grid = Grid(self.config)
@@ -21,6 +22,10 @@ class GameScreen:
         self.time_since_last_step = 0
         self.drawing_mode = None
         self.hover_pos = None
+
+        # Load background images
+        self.day_bg = pygame.image.load("assets/day.png").convert_alpha()
+        self.night_bg = pygame.image.load("assets/night.png").convert_alpha()
 
         # UI elements
         self.font = pygame.font.SysFont("Arial", 18, bold=True)
@@ -35,6 +40,7 @@ class GameScreen:
         # Initialize UI components
         self._init_buttons()
         self._init_colors()
+
 
     def _init_colors(self):
         self.ui_colors = {
@@ -63,21 +69,35 @@ class GameScreen:
 
     def handle_event(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN:
+            # Play click sound for any button press
+            button_clicked = False
+
             # Check button clicks
             if self.button_areas["pause"].collidepoint(event.pos):
                 self.paused = not self.paused
+                button_clicked = True
             elif self.button_areas["step"].collidepoint(event.pos):
                 self.simulation.step()
+                button_clicked = True
             elif self.button_areas["reset"].collidepoint(event.pos):
                 self.grid.random_populate()
+                button_clicked = True
             elif self.button_areas["save"].collidepoint(event.pos):
                 self.save_manager.save_game(self.grid, self.simulation)
+                button_clicked = True
             elif self.button_areas["load"].collidepoint(event.pos):
                 loaded = self.save_manager.load_game()
                 if loaded:
                     self.grid, self.simulation = loaded
+                button_clicked = True
             elif self.button_areas["menu"].collidepoint(event.pos):
                 self.game.current_state = self.game.MAIN_MENU
+                button_clicked = True
+
+            # Play sound if any button was clicked
+            if button_clicked:
+                self.game.audio_manager.play_sound("button_click")
+
             # Handle grid cell clicking
             elif (self.grid_x_offset <= event.pos[0] <= self.grid_x_offset + self.grid_surface_width and
                   self.grid_y_offset <= event.pos[1] <= self.grid_y_offset + self.grid_surface_height):
@@ -130,8 +150,14 @@ class GameScreen:
         time_changed = self.simulation.update(dt)
 
     def draw(self, screen):
-        # Draw background
+        # Fill with base color first
         screen.fill(self.ui_colors["bg"])
+
+        # Draw background tiles using the day/night images
+        if self.simulation.is_day:
+            self._draw_tiled_background(screen, self.day_bg, is_day=True)
+        else:
+            self._draw_tiled_background(screen, self.night_bg, is_day=False)
 
         # Draw grid
         self._draw_grid(screen)
@@ -142,6 +168,54 @@ class GameScreen:
         self._draw_simulation_speed(screen)
         self._draw_buttons(screen)
         self._draw_tool_indicator(screen)
+
+    def _draw_tiled_background(self, screen, bg_image, is_day=False):
+        # Create a surface for the grid area only
+        bg_surface = pygame.Surface((self.grid_surface_width, self.grid_surface_height), pygame.SRCALPHA)
+
+        # Scale down the image to the desired size
+        small_tile_size = 24
+        small_bg_image = pygame.transform.scale(bg_image, (small_tile_size, small_tile_size))
+
+        # Brighten the day image if needed
+        if is_day:
+            # Create a copy to modify
+            brightened_image = small_bg_image.copy()
+
+            # Get pixel array to modify colors
+            pixel_array = pygame.surfarray.pixels3d(brightened_image)
+
+            # Increase brightness (multiply RGB values, clamp to 255)
+            # Adjust the brightness factor as needed (1.3 = 30% brighter)
+            brightness_factor = 1.3
+
+            # Apply brightness with numpy operations
+            import numpy as np
+            brighten = np.minimum(pixel_array * brightness_factor, 255).astype(np.uint8)
+            pixel_array[:] = brighten
+
+            # Free the surface array
+            del pixel_array
+
+            # Use the brightened image
+            small_bg_image = brightened_image
+
+        # Set opacity
+        small_bg_image.set_alpha(178)  # 70% opacity
+
+        # Calculate how many tiles we need with the adjusted tile size
+        cols = self.grid_surface_width // small_tile_size + 1
+        rows = self.grid_surface_height // small_tile_size + 1
+
+        # Draw the tiled background
+        for row in range(rows):
+            for col in range(cols):
+                x = col * small_tile_size
+                y = row * small_tile_size
+                bg_surface.blit(small_bg_image, (x, y))
+
+        # Draw the background only behind the grid
+        screen.blit(bg_surface, (self.grid_x_offset, self.grid_y_offset))
 
     def _draw_grid(self, screen):
         grid_surface = pygame.Surface((self.grid_surface_width, self.grid_surface_height), pygame.SRCALPHA)
@@ -290,4 +364,6 @@ class GameScreen:
         speed_text = f"Speed: {self.simulation_speed}x"
         text_surface = self.font.render(speed_text, True, self.ui_colors["text"])
         screen.blit(text_surface, (self.config.SCREEN_WIDTH - text_surface.get_width() - 30, 20))
+
+
 
