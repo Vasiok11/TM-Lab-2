@@ -2,6 +2,8 @@ class Cell:
     EMPTY = 0
     HUMAN = 1
     VAMPIRE = 2
+    FOREST = 3
+    BUNKER = 4
 
     def __init__(self, x, y, cell_type=EMPTY):
         self.x = x
@@ -36,6 +38,12 @@ class Cell:
 
     def is_empty(self):
         return self.cell_type == Cell.EMPTY
+
+    def is_forest(self):
+        return self.cell_type == Cell.FOREST
+
+    def is_bunker(self):
+        return self.cell_type == Cell.BUNKER
 
 
 class Human:

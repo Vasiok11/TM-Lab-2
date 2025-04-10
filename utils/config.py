@@ -10,6 +10,8 @@ class Config:
         self.GRID_COLOR = (50, 50, 60)
         self.HUMAN_COLOR = (65, 105, 225)  # Royal blue for humans
         self.VAMPIRE_COLOR = (139, 0, 0)  # Dark red for vampires
+        self.FOREST_COLOR = (34, 139, 34)  # Forest green
+        self.BUNKER_COLOR = (139, 137, 137)  # Gray bunker color
         self.UI_BG_COLOR = (15, 15, 25)
         self.UI_TEXT_COLOR = (230, 230, 230)
         self.UI_HIGHLIGHT_COLOR = (100, 0, 0)

@@ -15,8 +15,8 @@ class Grid:
             for y in range(self.height):
                 self.cells[x][y] = Cell(x, y)
 
-    def random_populate(self, human_ratio=0.1, vampire_ratio=0.05):
-        """Randomly populate the grid with humans and vampires"""
+    def random_populate(self, human_ratio=0.1, vampire_ratio=0.05, forest_ratio=0.05, bunker_ratio=0.03):
+        """Randomly populate the grid with humans, vampires, forests and bunkers"""
         self.reset()
 
         for x in range(self.width):
@@ -28,6 +28,12 @@ class Grid:
                 elif r < human_ratio + vampire_ratio:
                     self.cells[x][y].cell_type = Cell.VAMPIRE
                     self.cells[x][y].next_state = Cell.VAMPIRE
+                elif r < human_ratio + vampire_ratio + forest_ratio:
+                    self.cells[x][y].cell_type = Cell.FOREST
+                    self.cells[x][y].next_state = Cell.FOREST
+                elif r < human_ratio + vampire_ratio + forest_ratio + bunker_ratio:
+                    self.cells[x][y].cell_type = Cell.BUNKER
+                    self.cells[x][y].next_state = Cell.BUNKER
 
     def get_cell(self, x, y):
         """Get the cell at the specified position, handling wrap-around"""
@@ -92,6 +98,8 @@ class Grid:
             "human_count": 0,
             "vampire_count": 0,
             "empty_count": 0,
+            "forest_count": 0,
+            "bunker_count": 0,
             "human_ages": [],
             "vampire_ages": []
         }
@@ -106,6 +114,10 @@ class Grid:
                 elif cell.is_vampire():
                     stats["vampire_count"] += 1
                     stats["vampire_ages"].append(cell.age)
+                elif cell.is_forest():
+                    stats["forest_count"] += 1
+                elif cell.is_bunker():
+                    stats["bunker_count"] += 1
                 else:
                     stats["empty_count"] += 1
 
