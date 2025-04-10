@@ -3,6 +3,7 @@ from game.grid import Grid
 from game.simulation import Simulation
 from game.entities import Cell, Human, Vampire
 from utils.save_load import SaveLoadManager
+from utils.resources import load_image
 
 
 class GameScreen:
@@ -24,8 +25,8 @@ class GameScreen:
         self.hover_pos = None
 
         # Load background images
-        self.day_bg = pygame.image.load("assets/day.png").convert_alpha()
-        self.night_bg = pygame.image.load("assets/night.png").convert_alpha()
+        self.day_bg = load_image("day.png")
+        self.night_bg = load_image("night.png")
 
         # UI elements
         self.font = pygame.font.SysFont("Arial", 18, bold=True)

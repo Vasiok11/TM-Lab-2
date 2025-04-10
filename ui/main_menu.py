@@ -2,6 +2,7 @@ import pygame
 import math
 import random
 from pygame import gfxdraw
+from utils.resources import get_resource_path
 
 
 class MainMenu:
@@ -10,9 +11,9 @@ class MainMenu:
         self.config = game.config
         # Load fonts
         try:
-            self.title_font = pygame.font.Font("assets/fonts/vampire.ttf", 74)
-            self.menu_font = pygame.font.Font("assets/fonts/gothic.ttf", 32)
-            self.footer_font = pygame.font.Font("assets/fonts/gothic.ttf", 16)
+            self.hover_sound = pygame.mixer.Sound("assets/sounds/hover.wav")
+            self.select_sound = pygame.mixer.Sound("assets/sounds/select.wav")
+            self.ambient_sound = pygame.mixer.Sound("assets/sounds/ambient.wav")
         except:
             # Fallback to system fonts if custom fonts not available
             self.title_font = pygame.font.SysFont("Arial", 64, bold=True)

@@ -1,10 +1,6 @@
-# audio_manager.py
 import pygame
 import os
-
-# utils/audio.py
-import pygame
-import os
+from utils.resources import get_resource_path, load_sound
 
 
 class AudioManager:
@@ -28,13 +24,14 @@ class AudioManager:
         self.sounds = {}
         for name, path in config.SOUND_FX.items():
             try:
-                if os.path.exists(path):
-                    self.sounds[name] = pygame.mixer.Sound(path)
-                    self.sounds[name].set_volume(self.sfx_volume)
-                else:
-                    print(f"Sound file not found: {path}")
-                    self.sounds[name] = None
-            except pygame.error as e:
+                # Extract just the filename from the path
+                filename = os.path.basename(path)
+                print(f"Loading sound {name}: {filename}")
+
+                # Use the load_sound function
+                self.sounds[name] = load_sound(filename)
+                self.sounds[name].set_volume(self.sfx_volume)
+            except Exception as e:
                 print(f"Could not load sound {name}: {e}")
                 self.sounds[name] = None
 
@@ -45,13 +42,15 @@ class AudioManager:
 
         if self.current_music != "menu":
             try:
-                if os.path.exists(self.config.MENU_MUSIC):
-                    pygame.mixer.music.load(self.config.MENU_MUSIC)
-                    pygame.mixer.music.set_volume(self.music_volume if not self.is_muted else 0)
-                    pygame.mixer.music.play(-1)  # Loop indefinitely
-                    self.current_music = "menu"
-                else:
-                    print(f"Menu music file not found: {self.config.MENU_MUSIC}")
+                # Extract just the filename from the config path
+                music_file = os.path.basename(self.config.MENU_MUSIC)
+                music_path = get_resource_path(os.path.join('assets', music_file))
+
+                print(f"Loading menu music: {music_path}")
+                pygame.mixer.music.load(music_path)
+                pygame.mixer.music.set_volume(self.music_volume if not self.is_muted else 0)
+                pygame.mixer.music.play(-1)  # Loop indefinitely
+                self.current_music = "menu"
             except pygame.error as e:
                 print(f"Could not play menu music: {e}")
 
@@ -63,14 +62,18 @@ class AudioManager:
         track = "day" if is_day else "night"
         if self.current_music != track:
             try:
-                music_path = self.config.GAME_MUSIC_DAY if is_day else self.config.GAME_MUSIC_NIGHT
-                if os.path.exists(music_path):
-                    pygame.mixer.music.load(music_path)
-                    pygame.mixer.music.set_volume(self.music_volume if not self.is_muted else 0)
-                    pygame.mixer.music.play(-1)  # Loop indefinitely
-                    self.current_music = track
-                else:
-                    print(f"Game music file not found: {music_path}")
+                # Get the appropriate music path based on day/night
+                config_path = self.config.GAME_MUSIC_DAY if is_day else self.config.GAME_MUSIC_NIGHT
+
+                # Extract just the filename
+                music_file = os.path.basename(config_path)
+                music_path = get_resource_path(os.path.join('assets', music_file))
+
+                print(f"Loading game music ({track}): {music_path}")
+                pygame.mixer.music.load(music_path)
+                pygame.mixer.music.set_volume(self.music_volume if not self.is_muted else 0)
+                pygame.mixer.music.play(-1)  # Loop indefinitely
+                self.current_music = track
             except pygame.error as e:
                 print(f"Could not play game music: {e}")
 
@@ -82,7 +85,12 @@ class AudioManager:
     def play_sound(self, name):
         """Play a sound effect by name"""
         if not self.is_muted and name in self.sounds and self.sounds[name]:
+            print(f"Playing sound: {name}")
             self.sounds[name].play()
+        elif name in self.sounds and self.sounds[name] is None:
+            print(f"Cannot play sound {name}: Sound not loaded")
+        elif name not in self.sounds:
+            print(f"Sound not found: {name}")
 
     def toggle_mute(self):
         """Toggle audio mute state"""
