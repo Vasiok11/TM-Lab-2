@@ -1,5 +1,7 @@
 import pygame
 import math
+from utils.resources import get_resource_path
+from utils.resources import load_sound
 
 
 class SettingsMenu:
@@ -9,9 +11,9 @@ class SettingsMenu:
 
         # Load fonts
         try:
-            self.title_font = pygame.font.Font("assets/fonts/gothic.ttf", 46)
-            self.option_font = pygame.font.Font("assets/fonts/gothic.ttf", 24)
-            self.info_font = pygame.font.Font("assets/fonts/gothic.ttf", 16)
+            self.title_font = pygame.font.Font(get_resource_path("assets/fonts/gothic.ttf"), 46)
+            self.option_font = pygame.font.Font(get_resource_path("assets/fonts/gothic.ttf"), 24)
+            self.info_font = pygame.font.Font(get_resource_path("assets/fonts/gothic.ttf"), 16)
         except:
             self.title_font = pygame.font.SysFont("Arial", 36, bold=True)
             self.option_font = pygame.font.SysFont("Arial", 24)
@@ -63,9 +65,9 @@ class SettingsMenu:
 
         # Sounds (optional fallback-safe)
         try:
-            self.hover_sound = pygame.mixer.Sound("assets/sounds/hover.wav")
-            self.select_sound = pygame.mixer.Sound("assets/sounds/select.wav")
-            self.slider_sound = pygame.mixer.Sound("assets/sounds/slider.wav")
+            self.hover_sound = load_sound("sounds/hover.wav")
+            self.select_sound = load_sound("sounds/select.wav")
+            self.slider_sound = load_sound("sounds/slider.wav")
             self.has_sound = True
         except:
             self.has_sound = False
